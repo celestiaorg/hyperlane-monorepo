@@ -26,6 +26,8 @@ concurrency:
   cancel-in-progress: true
 jobs:
   build-and-push:
+    # The Depot projects belong to hyperlane-xyz, so Depot rejects the OIDC token of forks.
+    if: github.repository_owner == 'hyperlane-xyz'
     runs-on: ubuntu-latest
     permissions:
       contents: read
