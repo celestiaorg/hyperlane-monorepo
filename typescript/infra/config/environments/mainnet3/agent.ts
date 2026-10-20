@@ -31,8 +31,10 @@ import {
   MetricAppContext,
   chainMapMatchingList,
   consistentSenderRecipientMatchingList,
+  MetadexVoterAdapterTopology,
   icaMatchingList,
   matchingList,
+  metadexVoterMetricAppContexts,
   multiAddressChainMapMatchingList,
   routerMatchingList,
   senderMatchingList,
@@ -116,7 +118,7 @@ export const hyperlaneContextAgentChainConfig: AgentChainConfig<
     monad: true,
     nesa: false, // disabled — superseded by nesachain after the Nesa incident
     nesachain: true,
-    nexus: true,
+    nexus: false, // disabled — Nexus chain shut down by the Nexus team
     optimism: true,
     paradex: true,
     plasma: true,
@@ -188,7 +190,7 @@ export const hyperlaneContextAgentChainConfig: AgentChainConfig<
     monad: true,
     nesa: false, // disabled — superseded by nesachain after the Nesa incident
     nesachain: true,
-    nexus: true,
+    nexus: false, // disabled — Nexus chain shut down by the Nexus team
     optimism: true,
     paradex: true,
     plasma: true,
@@ -222,7 +224,7 @@ export const hyperlaneContextAgentChainConfig: AgentChainConfig<
     arc: true,
     avalanche: true,
     base: true,
-    blast: false,
+    blast: true, // temporarily re-enabled for withdrawals until Blast shutdown on 2026-10-26
     bob: true,
     bsc: true,
     celestia: true,
@@ -260,7 +262,7 @@ export const hyperlaneContextAgentChainConfig: AgentChainConfig<
     monad: true,
     nesa: false, // disabled — superseded by nesachain after the Nesa incident
     nesachain: true,
-    nexus: true,
+    nexus: false, // disabled — Nexus chain shut down by the Nexus team
     optimism: true,
     paradex: true,
     plasma: true,
@@ -485,6 +487,22 @@ const stagingStHyperMatchingList = chainMapMatchingList({
   ethereum: '0x0C919509663cb273E156B706f065b9F7e6331891',
 });
 
+// Aero MetaDEX staging voter adapters. Root: base. Leaves: optimism, arbitrum.
+const metadexStagingTopology: MetadexVoterAdapterTopology = {
+  prefix: 'metadex_staging',
+  rootChain: 'base',
+  leaves: {
+    optimism: {
+      rootAdapter: '0x504E81562daFe4eFE87a4b3025F805eb0e9c5c15',
+      leafAdapters: ['0x1733cD126a227066963E9B636Ad49898d1224741'],
+    },
+    arbitrum: {
+      rootAdapter: '0xAfB6d2686b85c795E1b9324d4cBBED269D7f01A8',
+      leafAdapters: ['0xAAA49BD49A9bE1EAe5534EB35FC2c346afD7CA49'],
+    },
+  },
+};
+
 // Gets metric app contexts, including:
 // - all warp routes defined in WarpRouteIds, using addresses from the registry
 // - misc important applications not defined in the registry, e.g. merkly
@@ -575,6 +593,7 @@ const metricAppContextsGetter = (): MetricAppContext[] => {
         '0x36f586A30502AE3afb555b8aA4dCc05d233c2ecE',
       ),
     },
+    ...metadexVoterMetricAppContexts(metadexStagingTopology),
   ];
 };
 
@@ -894,6 +913,15 @@ const fastPathUsdcMatchingList = chainMapMatchingList({
   citrea: '0x38E8720EBE02e7c5254F9De9F81440C7a770a9c6',
 });
 
+const fastPathEclipseUsdcMatchingList = warpRouteMatchingList(
+  WarpRouteIds.EclipseUSDC,
+).filter(
+  ({ originDomain, destinationDomain }) =>
+    originDomain === getDomainId('ethereum') &&
+    destinationDomain !== getDomainId('eclipsemainnet') &&
+    destinationDomain !== getDomainId('solanamainnet'),
+);
+
 // Cross Collateral USDT - https://github.com/hyperlane-xyz/hyperlane-registry/blob/codex/nambrot-cross-collateral-deploy/deployments/warp_routes/USDT/ctusd-config.yaml
 const fastPathUsdtMatchingList = chainMapMatchingList({
   arbitrum: '0x824353938ee1361265097acC9E329828e3455c15',
@@ -973,12 +1001,21 @@ const fastPath: RootAgentConfig = {
     ],
     relayer: [
       'arbitrum',
+      'arc',
+      'avalanche',
       'base',
       'bsc',
       'citrea',
       'ethereum',
+      'hyperevm',
+      'ink',
       'katana',
+      'linea',
+      'monad',
+      'optimism',
       'polygon',
+      'unichain',
+      'worldchain',
     ],
     scraper: [],
   },
@@ -993,6 +1030,7 @@ const fastPath: RootAgentConfig = {
     },
     whitelist: [
       ...fastPathUsdcMatchingList,
+      ...fastPathEclipseUsdcMatchingList,
       ...fastPathUsdtMatchingList,
       ...fastPathCrossMoonpayMatchingList,
       ...fastPathTestRecipientMatchingList,

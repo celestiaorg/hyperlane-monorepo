@@ -32,6 +32,7 @@ export type GasPaymentCursor = {
 };
 export type StreamCursor = GasPaymentCursor | SequenceCursor;
 export type StreamRequest = {
+  confirmations?: number;
   cursors?: StreamCursor[];
   domains?: Set<number>;
   eventType: EventType;
@@ -39,7 +40,15 @@ export type StreamRequest = {
 };
 export type ClientMessage =
   | { type: 'ping' }
-  | { streams: StreamRequest[]; type: 'subscribe' };
+  | { streams: (StreamRequest | BlockStreamRequest)[]; type: 'subscribe' };
+export type BlockStreamRequest = {
+  eventType: 'blocks';
+  domains?: Set<number>;
+  confirmations?: never;
+  cursors?: never;
+  streamCursorVersion?: never;
+};
+export const SUBSCRIPTION_TYPES = [...EVENT_TYPES, 'blocks'];
 export type EventNotification = {
   domain: number;
   eventType: EventType;
@@ -49,6 +58,10 @@ export type ExplorerNotification = { messageId: string };
 export type HeadNotification = {
   confirmedHeight: bigint;
   domain: number;
+  headHeight?: bigint;
+  indexedHeight?: bigint;
+  indexedHash?: string;
+  previousIndexedHeight?: bigint;
   previousConfirmedHeight?: bigint;
 };
 
@@ -64,8 +77,13 @@ export function parseClientMessage(raw: string): ClientMessage {
   if (value.type !== 'subscribe' || !Array.isArray(value.streams)) {
     throw new Error('Unsupported client message type');
   }
-  if (!value.streams.length || value.streams.length > EVENT_TYPES.length) {
-    throw new Error(`Subscribe to between 1 and ${EVENT_TYPES.length} streams`);
+  if (
+    !value.streams.length ||
+    value.streams.length > SUBSCRIPTION_TYPES.length
+  ) {
+    throw new Error(
+      `Subscribe to between 1 and ${SUBSCRIPTION_TYPES.length} streams`,
+    );
   }
 
   const streams = value.streams.map(parseStream);
@@ -143,6 +161,15 @@ export function parseHeadNotification(
       value.previousConfirmedHeight === undefined
         ? undefined
         : parseId(value.previousConfirmedHeight),
+    headHeight:
+      value.headHeight == null ? undefined : parseId(value.headHeight),
+    indexedHeight:
+      value.indexedHeight == null ? undefined : parseId(value.indexedHeight),
+    indexedHash: parseOptionalBlockHash(value.indexedHash),
+    previousIndexedHeight:
+      value.previousIndexedHeight == null
+        ? undefined
+        : parseId(value.previousIndexedHeight),
   };
 }
 
@@ -189,12 +216,27 @@ export function displayAddress(value: string): string {
   return `0x${normalizeAddress(value).slice(2)}`;
 }
 
-function parseStream(value: unknown): StreamRequest {
-  if (!isRecord(value) || !isEventType(value.eventType)) {
+function parseStream(value: unknown): StreamRequest | BlockStreamRequest {
+  if (
+    !isRecord(value) ||
+    (!isEventType(value.eventType) && value.eventType !== 'blocks')
+  ) {
     throw new Error('Invalid eventType');
   }
   if (value.afterId !== undefined || value.afterStreamCursor !== undefined) {
     throw new Error('cursor positions must be specified within a cursor');
+  }
+  if (value.eventType === 'blocks') {
+    if (
+      value.confirmations !== undefined ||
+      value.cursors !== undefined ||
+      value.streamCursorVersion !== undefined
+    ) {
+      throw new Error(
+        'blocks supports live heads only, without confirmations or cursors',
+      );
+    }
+    return { eventType: 'blocks', domains: parseDomains(value.domains) };
   }
   let streamCursorVersion: number | undefined;
   if (value.eventType === 'gas_payment') {
@@ -219,17 +261,7 @@ function parseStream(value: unknown): StreamRequest {
     throw new Error('streamCursorVersion is unsupported for this stream');
   }
 
-  let domains: Set<number> | undefined;
-  if (value.domains !== undefined) {
-    if (
-      !Array.isArray(value.domains) ||
-      !value.domains.length ||
-      !value.domains.every(isDomain)
-    ) {
-      throw new Error('domains must contain valid domain IDs');
-    }
-    domains = new Set(value.domains);
-  }
+  let domains = parseDomains(value.domains);
 
   let cursors: StreamCursor[] | undefined;
   if (value.cursors !== undefined) {
@@ -253,11 +285,72 @@ function parseStream(value: unknown): StreamRequest {
     domains ??= cursorDomains;
   }
   return {
+    confirmations: parseConfirmations(value.confirmations, domains, cursors),
     cursors,
     domains,
     eventType: value.eventType,
     streamCursorVersion,
   };
+}
+
+export function parseConfirmations(
+  value: unknown,
+  domains?: Set<number>,
+  cursors?: StreamCursor[],
+): number | undefined {
+  if (value === undefined) return undefined;
+  if (typeof value !== 'number' || !Number.isSafeInteger(value) || value < 0)
+    throw new Error('confirmations must be a non-negative safe integer');
+  if (!domains?.size)
+    throw new Error('confirmations requires explicit domains');
+  if (cursors)
+    throw new Error('Custom confirmations supports live streams only');
+  return value;
+}
+
+export function parseExplorerConfirmations(
+  url: string | undefined,
+): { confirmations: number; domains: Set<number> } | undefined {
+  const params = new URL(url ?? '/', 'http://localhost').searchParams;
+  if (!params.has('confirmations') && !params.has('domains')) return undefined;
+  const count = params.get('confirmations');
+  const domainList = params.get('domains');
+  if (
+    !count ||
+    !/^\d+$/.test(count) ||
+    !domainList ||
+    !/^\d+(,\d+)*$/.test(domainList)
+  )
+    throw new Error('Expected confirmations=N&domains=domain,...');
+  const domains = new Set(domainList.split(',').map(Number));
+  if (![...domains].every(isDomain)) throw new Error('Invalid domains');
+  const confirmations = parseConfirmations(Number(count), domains);
+  if (confirmations === undefined) throw new Error('Missing confirmations');
+  return { confirmations, domains };
+}
+
+export function parseExplorerBlocks(url: string | undefined): boolean {
+  const value = new URL(url ?? '/', 'http://localhost').searchParams.get(
+    'blocks',
+  );
+  if (value === null || value === 'false') return false;
+  if (value !== 'true') throw new Error('Expected blocks=true');
+  return true;
+}
+
+function parseDomains(value: unknown): Set<number> | undefined {
+  if (value === undefined) return undefined;
+  if (!Array.isArray(value) || !value.length || !value.every(isDomain)) {
+    throw new Error('domains must contain valid domain IDs');
+  }
+  return new Set(value);
+}
+
+export function parseOptionalBlockHash(value: unknown): string | undefined {
+  if (typeof value !== 'string' || !/^[0-9a-fA-F]{64}$/.test(value)) {
+    return undefined;
+  }
+  return `0x${value.toLowerCase()}`;
 }
 
 function parseSequenceCursor(value: unknown): SequenceCursor {

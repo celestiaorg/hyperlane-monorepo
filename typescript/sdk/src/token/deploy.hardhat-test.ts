@@ -495,7 +495,7 @@ describe('TokenDeployer', async () => {
         config[chain] = {
           ...config[chain],
           type,
-          // @ts-expect-error - Test assigns varying token types to config
+          // @ts-expect-error - Synthetic test configurations omit the token address.
           token: token(),
           xERC20:
             type === TokenType.XERC20
@@ -873,7 +873,7 @@ describe('TokenDeployer', async () => {
         config[chain] = {
           ...config[chain],
           type,
-          // @ts-expect-error - Test assigns varying token types to config
+          // @ts-expect-error - Synthetic test configurations omit the token address.
           token: token(),
         };
         const warpRoute = await deployer.deploy(config);
