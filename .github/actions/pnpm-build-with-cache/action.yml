@@ -38,6 +38,7 @@ runs:
       shell: bash
       env:
         BUILD_FILTER: ${{ inputs.build-filter }}
+        GITHUB_TOKEN: ${{ github.token }}
       run: |
         if [ -n "$BUILD_FILTER" ]; then
           pnpm exec turbo run build --filter="$BUILD_FILTER"

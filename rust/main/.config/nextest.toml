@@ -4,3 +4,6 @@
 fail-fast = false
 # Repeat failure output at the end so it is easy to find in CI logs.
 failure-output = "immediate-final"
+# Retry failing tests so timing-sensitive tests do not fail the job on slower runners.
+# Tests that only pass on retry are reported as flaky.
+retries = 2

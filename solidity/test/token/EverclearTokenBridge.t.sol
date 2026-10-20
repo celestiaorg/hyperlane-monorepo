@@ -646,7 +646,7 @@ contract BaseEverclearTokenBridgeForkTest is Test {
         // 3. Find the exact storage slot layout of the Everclear spoke implementation
         //
         // Until then, this is the most pragmatic approach that keeps tests passing.
-        vm.createSelectFork("arbitrum", 399563028);
+        vm.createSelectFork("arbitrum_archive", 399563028);
 
         weth = IWETH(ARBITRUM_WETH);
         everclearAdapter = IEverclearAdapter(EVERCLEAR_ADAPTER);

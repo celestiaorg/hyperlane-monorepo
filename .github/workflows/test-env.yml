@@ -17,8 +17,10 @@ jobs:
     runs-on: ubuntu-latest
     if: inputs.skip_ts != 'true'
     env:
-      MAINNET3_ARBITRUM_RPC_URLS: ${{ secrets.MAINNET3_ARBITRUM_RPC_URLS }}
-      MAINNET3_OPTIMISM_RPC_URLS: ${{ secrets.MAINNET3_OPTIMISM_RPC_URLS }}
+      # arb1.arbitrum.io (the registry default) rate-limits the igp fork test on CI runners when the secret is unset
+      MAINNET3_ARBITRUM_RPC_URLS: ${{ secrets.MAINNET3_ARBITRUM_RPC_URLS || (matrix.module == 'igp' && 'https://arbitrum-one.public.blastapi.io' || '') }}
+      # mainnet.optimism.io (the registry default) rate-limits the fork test when the secret is unset
+      MAINNET3_OPTIMISM_RPC_URLS: ${{ secrets.MAINNET3_OPTIMISM_RPC_URLS || 'https://optimism-rpc.publicnode.com' }}
       MAINNET3_ETHEREUM_RPC_URLS: ${{ secrets.MAINNET3_ETHEREUM_RPC_URLS }}
       TESTNET4_SEPOLIA_RPC_URLS: ${{ secrets.TESTNET4_SEPOLIA_RPC_URLS }}
 

@@ -22,8 +22,11 @@ async function runAnvil(rpcUrl: string) {
     [
       '--fork-url',
       rpcUrl,
+      // Ride out rate limits of public RPCs instead of failing the fork test.
       '--fork-retry-backoff',
-      '3',
+      '1000',
+      '--retries',
+      '20',
       '--no-rate-limit',
       '--gas-price',
       '1',

@@ -40,6 +40,7 @@ runs:
       shell: bash
       env:
         BUILD_FILTER: ${{ inputs.build-filter }}
+        GITHUB_TOKEN: ${{ github.token }}
       run: |
         pnpm install --frozen-lockfile
         if [ -n "$BUILD_FILTER" ]; then
