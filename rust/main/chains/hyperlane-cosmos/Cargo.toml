@@ -30,6 +30,8 @@ itertools = { workspace = true }
 once_cell = { workspace = true }
 pin-project.workspace = true
 protobuf = { workspace = true }
+# needed to declare the AggregationISM message that is not part of hyperlane-cosmos-rs yet
+prost = { version = "0.13" }
 ripemd = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }

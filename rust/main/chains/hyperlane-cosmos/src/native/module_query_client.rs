@@ -11,6 +11,7 @@ use hyperlane_cosmos_rs::hyperlane::core::v1::query_client::QueryClient;
 use hyperlane_cosmos_rs::hyperlane::core::v1::{
     MsgProcessMessage, QueryDeliveredRequest, QueryDeliveredResponse, QueryMailboxRequest,
     QueryMailboxResponse, QueryRecipientIsmRequest, QueryRecipientIsmResponse,
+    QueryVerifyDryRunRequest, QueryVerifyDryRunResponse,
 };
 use hyperlane_cosmos_rs::hyperlane::warp::v1::MsgRemoteTransfer;
 use hyperlane_cosmos_rs::prost::{Message, Name};
@@ -256,6 +257,37 @@ impl ModuleQueryClient {
                             id: mailbox_id,
                             message_id,
                         })
+                        .await
+                        .map_err(HyperlaneCosmosError::from)?
+                        .into_inner();
+                    Ok(result)
+                };
+                Box::pin(future)
+            })
+            .await
+    }
+
+    /// Dry runs the verification of a message by an ISM.
+    /// The module returns an error if the verification fails.
+    pub async fn verify_dry_run(
+        &self,
+        ism_id: String,
+        message: Vec<u8>,
+        metadata: Vec<u8>,
+    ) -> ChainResult<QueryVerifyDryRunResponse> {
+        self.grpc
+            .call(|client| {
+                let request = QueryVerifyDryRunRequest {
+                    ism_id: ism_id.clone(),
+                    message: format!("0x{}", hex::encode(&message)),
+                    metadata: format!("0x{}", hex::encode(&metadata)),
+                    // use the module's default gas limit
+                    gas_limit: String::new(),
+                };
+                let future = async move {
+                    let mut service = QueryClient::new(client.channel());
+                    let result = service
+                        .verify_dry_run(request)
                         .await
                         .map_err(HyperlaneCosmosError::from)?
                         .into_inner();

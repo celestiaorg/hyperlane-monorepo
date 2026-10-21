@@ -12,6 +12,13 @@ readonly VERSION="v0.3.2"
 readonly MAX_RETRIES=3
 readonly RETRY_DELAY=5
 
+# Authenticate GitHub API requests when a token is available, since anonymous
+# requests are limited to 60 per hour per IP and shared CI runners hit that limit.
+GITHUB_API_AUTH=()
+if [ -n "${GITHUB_TOKEN:-}" ]; then
+    GITHUB_API_AUTH=(-H "Authorization: Bearer ${GITHUB_TOKEN}")
+fi
+
 # Color definitions
 declare -r COLOR_GREEN='\033[0;32m'
 declare -r COLOR_RED='\033[0;31m'
@@ -73,7 +80,7 @@ check_if_contracts_exist() {
 
 verify_version_exists() {
     local version=$1
-    if ! curl_with_retry "${GITHUB_RELEASES_API}/tags/${version}" --output /dev/null --silent --head --fail; then
+    if ! curl_with_retry "${GITHUB_RELEASES_API}/tags/${version}" ${GITHUB_API_AUTH[@]+"${GITHUB_API_AUTH[@]}"} --output /dev/null --silent --head --fail; then
         log_error "Version ${version} does not exist"
         exit 1
     fi
@@ -83,7 +90,7 @@ get_release_info() {
     local version=$1
     local release_info
 
-    release_info=$(curl_with_retry "${GITHUB_RELEASES_API}/tags/${version}" -sf) || {
+    release_info=$(curl_with_retry "${GITHUB_RELEASES_API}/tags/${version}" ${GITHUB_API_AUTH[@]+"${GITHUB_API_AUTH[@]}"} -sf) || {
         log_error "Failed to fetch release information for version ${version}"
         exit 1
     }

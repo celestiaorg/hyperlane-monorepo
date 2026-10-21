@@ -25,7 +25,7 @@ env:
 
 jobs:
   fork-tests:
-    runs-on: depot-ubuntu-24.04
+    runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v7
@@ -45,6 +45,7 @@ jobs:
           echo "RPC_URL_OPTIMISM=${MAINNET3_OPTIMISM_RPC_URLS%%,*}" >> $GITHUB_ENV
           echo "RPC_URL_POLYGON=${MAINNET3_POLYGON_RPC_URLS%%,*}" >> $GITHUB_ENV
           echo "RPC_URL_ARBITRUM=${MAINNET3_ARBITRUM_RPC_URLS%%,*}" >> $GITHUB_ENV
+          echo "RPC_URL_ARBITRUM_ARCHIVE=${MAINNET3_ARBITRUM_RPC_URLS%%,*}" >> $GITHUB_ENV
           echo "RPC_URL_BASE=${MAINNET3_BASE_RPC_URLS%%,*}" >> $GITHUB_ENV
 
       - name: pnpm-build

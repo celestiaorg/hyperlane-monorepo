@@ -1365,8 +1365,10 @@ impl ChainConf {
 
                 Ok(ism as Box<dyn AggregationIsm>)
             }
-            ChainConnectionConf::CosmosNative(_) => {
-                Err(eyre!("Cosmos Native does not support aggregation ISM yet")).context(ctx)
+            ChainConnectionConf::CosmosNative(conf) => {
+                let provider = build_cosmos_native_provider(self, conf, metrics, &locator, None)?;
+                let ism = Box::new(h_cosmos::native::CosmosNativeIsm::new(provider, locator)?);
+                Ok(ism as Box<dyn AggregationIsm>)
             }
             ChainConnectionConf::Radix(_) => {
                 todo!("Radix aggregation ISM not yet implemented")

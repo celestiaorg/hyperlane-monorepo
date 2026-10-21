@@ -63,6 +63,8 @@ mainnet = "${RPC_URL_MAINNET}"
 optimism = "${RPC_URL_OPTIMISM}"
 polygon = "${RPC_URL_POLYGON}"
 arbitrum = "${RPC_URL_ARBITRUM}"
+# needs an archive node, used by fork tests pinned to a historical block
+arbitrum_archive = { endpoint = "${RPC_URL_ARBITRUM_ARCHIVE}", retries = 20, retry_backoff = 2000, compute_units_per_second = 100 }
 base = "${RPC_URL_BASE}"
 
 [fuzz]

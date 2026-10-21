@@ -5766,6 +5766,7 @@ dependencies = [
  "itertools 0.10.5",
  "once_cell",
  "pin-project",
+ "prost 0.13.4",
  "protobuf 2.28.0",
  "ripemd",
  "serde",

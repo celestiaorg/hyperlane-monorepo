@@ -54,7 +54,7 @@ jobs:
       id-token: write
       contents: write
       pull-requests: write
-    runs-on: depot-ubuntu-24.04
+    runs-on: ubuntu-latest
     steps:
       # Generate GitHub App token first.
       # Used by checkout fetch + changesets/action (via GITHUB_TOKEN) for release PR auth.
